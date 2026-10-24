@@ -15,7 +15,7 @@
 # ---- Setup ------------------------------------------------------------------
 
 # EDIT THIS LINE: put the path to the folder where you saved this script and
-setwd("C:/Users/Briselda/Desktop/uni/Econometrics/Practical2")
+#setwd("C:/Users/Briselda/Desktop/uni/Econometrics/Practical2")
 
 getwd()        # the folder R is working in
 list.files()   # must include "wage2.csv"; if not, check the folder
@@ -148,11 +148,14 @@ coef(reg_log)
 
 # (a) Approximate percentage: 100 x slope.
 100 * coef(reg_log)["educ"]
-# Answer:
+# Answer: 5.983921. In this sample, one more year of education is associated with
+# an approximately 6% increase in predicted monthly earnings
 
 # (b) Exact percentage: 100 x (exp(slope) - 1).
 100 * (exp(coef(reg_log)["educ"]) - 1)
-# Answer:
+# Answer: 6.166583
+# The exact figure is 6.2%. The approximation of log y works well for small changes
+# and a slope of 0.06 is small
 
 
 # ---- Q7. Compare levels and logs visually -------------------------------------
@@ -164,16 +167,22 @@ plot(wage2$educ, wage2$wage, pch = 16, col = rgb(0, 0, 0, 0.3),
 abline(reg_lev, col = "firebrick", lwd = 2)
 plot(wage2$educ, wage2$lwage, pch = 16, col = rgb(0, 0, 0, 0.3),
      xlab = "Years of education", ylab = "Log monthly earnings")
-abline(reg_log, col = "firebrick", lwd = 2)
+abline(reg_log, col = "navy", lwd = 2)
 par(mfrow = c(1, 1))
 
 # (b) In which plot is the spread around the line more even?
-# Answer:
+# Answer: In the monthly earnings in dollars plot, the spread seems to increase as 
+# education increases whereas the spread remains more even throughout for the
+# logarithmic scale.
 
 # (c) Compare the two R-squared values. Can they tell you which model fits better?
 summary(reg_lev)$r.squared
 summary(reg_log)$r.squared
-# Answer:
+# Answer: R squared for reg_lev = 0.107 and R squared for reg_log = 0.0974..
+# R^2 in each case measure how much of the spread in the monthly and log monthly
+# earnings can be explained by change in years of education. These are 2 different
+# dependent variables so their R^2 cannot be compared.
+
 
 
 # =============================================================================
@@ -185,11 +194,17 @@ summary(reg_log)$r.squared
 # (a) Regress wage on urban.
 reg_urb <- lm(wage ~ urban, data = wage2)
 coef(reg_urb)
-# Answer:
+# Answer: urban = binary variable
+# intercept 830.1098 is the mean monthly earnings of men who don't live in the city,
+# whereas the slope = 178.1216 is difference in mean monthly earnings between 
+# those living in the city and those who dont.
+
 
 # (b) Mean wage in each group. tapply() computes the mean separately for urban = 0 and 1.
 tapply(wage2$wage, wage2$urban, mean)
-# Answer:
+# Answer: group mean for non city living = 830.11, and 1008.24 for city living.
+# Intercept = mean for non city living, whereas mean for city living = (intercept + slope)
+# CONCLUSION: with binary regressors, OLS gives the means of the 2 groups
 
 
 # =============================================================================
@@ -200,36 +215,59 @@ tapply(wage2$wage, wage2$urban, mean)
 
 summary(reg_log)
 # Estimate, standard error, t value and p-value for educ:
-# Answer:
+se1 <- coef(summary(reg_log))["educ", "Std. Error"]
+b1_est <- coef(summary(reg_log))["educ", "Estimate"]
+t_value <- coef(summary(reg_log))["educ", "t value"]
+#p value = < 2.2e-16
+# Answer:  The slope is 0.0598 with standard error of 0.0598, a t value of 10.03
+# and a p value < 2.2e-16.
+
 # Residual standard error and its degrees of freedom. Why n - 2?
-# Answer:
+# Answer: From summary ran on reg_log, the residual standard error
+# is 0.4003 with 933 dof. This is n-2 because the residuals satisfy 2 restrictions,
+# i.e., the first order conditions of the residuals summing to 0, and zero sample
+# covariance, so estimating 2 coefficients uses up 2 dof
 
 
 # ---- Q10. Test whether education is related to log wages -----------------------
 
 # (a) State H0 and H1.
 # Answer:
-
+# H0: beta1 = 0
+# H1: beta1 =/ to 0
 # (b) t statistic by hand, and the 5% critical value.
-b1   <- coef(summary(reg_log))["educ", "Estimate"]
-se1  <- coef(summary(reg_log))["educ", "Std. Error"]
-t_0  <- b1 / se1
-t_0
-qt(0.975, df = df.residual(reg_log))   # two-sided 5% critical value
-# Answer:
+# from q9 we have computed b1_est and se1 to use in the t stat calculation
+b1_est
+se1
+# t stat = b1 est - b1 (in h0)/ se1
+t_0  <- b1_est / se1
+t_0 #10.03493
+# critical value finding:
+#
+# significant level = 5% so 2.5% for a 2 sided test = 0.975 percentile
 
+# will use the t table to find crit value at dof=933 and 2.5% and compare to |t stat|
+
+# if t stat > crit value reject h0
+
+critical_value <- qt(0.975, df = df.residual(reg_log))   # two-sided 5% critical value
+# Answer: 1.96251
+# tstat = 10.03 > 1.96 -> reject H0 at 5% sig level
 # (c) p-value by hand.
-2 * pt(-abs(t_0), df.residual(reg_log))
-# Answer:
+# in solution: c(t = t_0, critical = critical_value, p = 2* pt(-abs(t_0), df.residual(reg_log)))
+c(t = t_0, critical = critical_value, p = 2 * pt(-abs(t_0), df.residual(reg_log)))
+# Answer: p value = 1.4228x e^-22
+# if p value < sig level = reject h0 at 5% sig level.
 
 
 # ---- Q11. Confidence interval ---------------------------------------------------
 
 # (a) 95% confidence interval by hand, and from R.
-crit <- qt(0.975, df = df.residual(reg_log))
-c(lower = b1 - crit * se1, upper = b1 + crit * se1)
+# critical value stored in critical_value
+# interval calculation confidnece interval = b1hat +- critical_value x se(b1hat)
+c(lower = b1_est - critical_value * se1, upper = b1_est + critical_value * se1)
 confint(reg_log)
-# Answer:
+# Answer: confidence interval is correct = lower = 0.0481, upper = 0.0715
 
 # (b) Draw the interval and mark 0, 0.05 and 0.10.
 ci <- confint(reg_log)["educ", ]
@@ -240,10 +278,18 @@ points(coef(reg_log)["educ"], 0.5, pch = 19)
 abline(v = c(0, 0.05, 0.10), lty = 2)
 
 # (c) Which values lie inside? What would two-sided 5% tests of each conclude?
-# Answer:
+# Answer: only 0.05 lies inside the interval
+# this means that a 95% interval contains exactly the values a 2 sided 5% test
+# would not reject. Thus we wouldnt reject b1=0.05 and we would reject b1=0 and
+# b1=0.10. Our rejection of b1 = 0 matches findings in Q10
+
 
 # (d) "If we drew many samples and built a 95% confidence interval from each, ..."
-# Answer:
+# Answer: we would find that about 95% of those intervals would contain the true 
+#beta 1 value. 
+# Probability refers to the procedure across samples.
+# for this one interval beta 1 is either inside or NOT inside
+
 
 
 # =============================================================================
@@ -254,44 +300,54 @@ abline(v = c(0, 0.05, 0.10), lty = 2)
 
 reg_ll <- lm(lwage ~ log(IQ), data = wage2)
 coef(reg_ll)
-# Answer:
+# Answer: In this sample, a 1% increase in IQ is associated with approximately
+# 0.83% higher predicted monthly earnings
+# the slope is an elasticity!
 
 
 # ---- Q13. Rebuild the standard error by hand -------------------------------------
-
-n         <- nobs(reg_log)
+# need σ hat
+  # square root of SSR/n-2
+n <- nobs(reg_log) #number of observations
+n
 sigma_hat <- sqrt(sum(resid(reg_log)^2) / (n - 2))   # residual standard error
 sigma_hat
+# need SST = Sum of estimate -mean ^2
 SST_x     <- sum((wage2$educ - mean(wage2$educ))^2)
-sigma_hat / sqrt(SST_x)                               # standard error of the slope
+# se = sigma hat/ square root of sst
+se2 <- sigma_hat / sqrt(SST_x)  
+c(sigma_hat = sigma_hat, SST_x = SST_x, se = se2)
 # Answer:
-
-
+# sigma hat matches the residual se and se2 matches the standard error in the output
 # ---- Q14. Test other values, and visualise the tests ------------------------------
 
 # (a) t statistics for H0: slope = 0.05 and H0: slope = 0.10.
-t_05 <- (b1 - 0.05) / se1
-t_10 <- (b1 - 0.10) / se1
-c(t_05 = t_05, t_10 = t_10)
-# Answer:
+t_05 <- (b1_est - 0.05) / se1
+t_10 <- (b1_est - 0.10) / se1
+c(t_05 = t_05, t_10 = t_10, critical = critical_value)
+# Answer: t = 1.65 which is inside the interval and thus we do not reject H0
+# t = -6.73 for 0.10-this is very far left in the rejection region so REJECT H0
+# both match q11 c
 
-# (b) The t distribution under H0, the critical values and the two statistics.
+# (b) Plot The t distribution under H0, the critical values and the two statistics.
 dfree <- df.residual(reg_log)
-crit  <- qt(0.975, dfree)
+crit2  <- qt(0.975, dfree)
 curve(dt(x, dfree), from = -8, to = 8, xlab = "t", ylab = "density")
-abline(v = c(-crit, crit), lty = 2)              # 5% rejection cut-offs
-abline(v = c(t_05, t_10), lwd = 2, col = c("darkgreen", "firebrick"))
-# Answer:
+abline(v = c(-crit2, crit2), lty = 2)              # 5% rejection cut-offs
+abline(v = c(t_05, t_10), lwd = 2, col = c("darkgreen", "darkred"))
+
 
 # (c) "We do not reject 0.05, so the slope is exactly 0.05." What is wrong?
-# Answer:
+# Answer: Not rejecting does not show that beta1 = 0.05
+# -> it shows that the data are consistent with 0.05 and equally consistent with
+# every value in the interval
 
 
 # ---- Q15. Repeated samples -----------------------------------------------------------
 
 set.seed(20110)                        # makes the random draws reproducible
 R <- 1000
-slopes <- numeric(R)                   # an empty vector to store the slopes
+slopes50 <- numeric(R)                   # an empty vector to store the slopes
 for (r in 1:R) {
   rows      <- sample(nrow(wage2), 50) # 50 men, drawn at random
   slopes[r] <- coef(lm(lwage ~ educ, data = wage2[rows, ]))[2]
@@ -301,23 +357,27 @@ abline(v = coef(reg_log)["educ"], lwd = 2)
 
 # (a) Mean and SD of the slopes, against the slope in reg_log.
 c(mean = mean(slopes), sd = sd(slopes), full_data = unname(coef(reg_log)["educ"]))
-# Answer:
+# Answer: the mean is higher than in the population minimally, so the means are
+# actually close.
+# From the graph, it is evident that individual samples range widely around said
+# mean (0.060)
 
 # (b) Repeat with samples of 200 men: change 50 to 200 above and run again.
 # Answer:
-
+slopes200 <- numeric(R)                   # an empty vector to store the slopes
+for (r in 1:R) {
+  rows      <- sample(nrow(wage2), 200) # 200 men, drawn at random
+  slopes[r] <- coef(lm(lwage ~ educ, data = wage2[rows, ]))[2]
+}
+hist(slopes, breaks = 40, main = "", xlab = "slope on educ, one per sample")
+abline(v = coef(reg_log)["educ"], lwd = 2)
 
 # ---- Q16. Look at the residuals ---------------------------------------------------
 
 plot(wage2$educ, resid(reg_log), pch = 16, col = rgb(0, 0, 0, 0.3),
      xlab = "Years of education", ylab = "Residual")
 abline(h = 0, lty = 2, lwd = 2)
-# Answer:
+# Answer: spread looks roughly the same at every levle of education
+# -> this is about homoskedasticity
+# -> coefficient estimates themselves do not rely on slr.5 
 
-
-# ---- Q17. Optional, a taste of Week 4: add IQ --------------------------------------
-
-reg_iq <- lm(lwage ~ educ + IQ, data = wage2)
-coef(reg_iq)
-cor(wage2$educ, wage2$IQ)
-# Answer:
